@@ -75,29 +75,34 @@ const SectionCard = ({ title, icon, children, api, lastUpdated, onRefresh }) => 
         <span style={{ fontSize: '20px' }}>{icon}</span>
         <h3 style={{ margin: 0, color: theme.text, fontSize: '18px', fontWeight: 'bold' }}>{title}</h3>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {lastUpdated && (
-          <span style={{ fontSize: '10px', color: theme.muted }}>
-            업데이트: {lastUpdated.toLocaleTimeString('ko-KR')}
-          </span>
-        )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
         {onRefresh && (
-          <button
-            onClick={onRefresh}
-            style={{
-              background: 'transparent',
-              border: `1px solid ${theme.border}`,
-              color: theme.muted,
-              padding: '3px 8px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              lineHeight: 1,
-            }}
-            title="새로고침"
-          >
-            ↻
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '6px', padding: '4px 10px' }}>
+            {lastUpdated ? (
+              <span style={{ fontSize: '11px', color: theme.muted }}>
+                🕐 {lastUpdated.toLocaleTimeString('ko-KR')}
+              </span>
+            ) : (
+              <span style={{ fontSize: '11px', color: theme.muted }}>로딩 중...</span>
+            )}
+            <button
+              onClick={onRefresh}
+              style={{
+                background: theme.accent,
+                border: 'none',
+                color: '#fff',
+                padding: '3px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                lineHeight: 1,
+              }}
+              title="새로고침"
+            >
+              ↻ 새로고침
+            </button>
+          </div>
         )}
         {api && (
           <div
