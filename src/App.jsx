@@ -625,32 +625,38 @@ const Earthquake = () => {
 const Population = () => {
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const fetchPop = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        'https://restcountries.com/v3.1/all?fields=name,population,area,region,flags,cca3'
+      );
+      const data = await res.json();
+      const sorted = data
+        .filter((c) => c.population)
+        .sort((a, b) => b.population - a.population);
+      setCountries(sorted.slice(0, 30));
+      setLastUpdated(new Date());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchPop = async () => {
-      try {
-        const res = await fetch(
-          'https://restcountries.com/v3.1/all?fields=name,population,area,region,flags,cca3'
-        );
-        const data = await res.json();
-        const sorted = data
-          .filter((c) => c.population)
-          .sort((a, b) => b.population - a.population);
-        setCountries(sorted.slice(0, 30));
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchPop();
+    const interval = setInterval(fetchPop, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const maxPop = countries[0]?.population || 1;
 
   return (
     <div style={{ fontFamily: 'JetBrains Mono' }}>
-      <SectionCard title="국가별 인구 (상위 30)" icon="👥" api>
+      <SectionCard title="국가별 인구 (상위 30)" icon="👥" api lastUpdated={lastUpdated} onRefresh={fetchPop}>
         {loading ? (
           <Loader />
         ) : (
@@ -846,16 +852,39 @@ const Climate = () => {
 };
 
 const Trade = () => {
-  const tradeVolume = [
-    ['중국', '$6.30T', 'electronics', 'machinery'],
-    ['미국', '$5.19T', 'machinery', 'minerals'],
-    ['독일', '$3.05T', 'vehicles', 'machinery'],
-    ['일본', '$1.66T', 'electronics', 'vehicles'],
-    ['네덜란드', '$1.64T', 'machinery', 'minerals'],
-    ['한국', '$1.32T', 'electronics', 'semiconductors'],
-    ['프랑스', '$1.38T', 'machinery', 'plastics'],
-    ['이탈리아', '$1.24T', 'metals', 'machinery'],
-  ];
+  const [tradeData, setTradeData] = useState([]);
+  const [tradeLoading, setTradeLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const COUNTRY_KO = { CHN:'중국', USA:'미국', DEU:'독일', JPN:'일본', NLD:'네덜란드', KOR:'한국', FRA:'프랑스', ITA:'이탈리아' };
+  const COUNTRY_COLORS = ['#ef4444','#3b82f6','#f97316','#10b981','#8b5cf6','#06b6d4','#fbbf24','#ec4899'];
+
+  const fetchTrade = async () => {
+    setTradeLoading(true);
+    try {
+      const res = await fetch(
+        'https://api.worldbank.org/v2/country/CHN;USA;DEU;JPN;NLD;KOR;FRA;ITA/indicator/TG.VAL.TOTL.GD.ZS?format=json&date=2022&per_page=20'
+      );
+      const data = await res.json();
+      if (data[1]) {
+        const sorted = data[1]
+          .filter((d) => d.value)
+          .sort((a, b) => b.value - a.value);
+        setTradeData(sorted);
+        setLastUpdated(new Date());
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTradeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTrade();
+    const interval = setInterval(fetchTrade, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const ports = [
     { name: 'Shanghai', vol: 49.0, color: '#ef4444' },
@@ -869,14 +898,31 @@ const Trade = () => {
   ];
 
   const maxPort = Math.max(...ports.map((p) => p.vol));
+  const maxTrade = tradeData[0]?.value || 1;
 
   return (
     <div style={{ fontFamily: 'JetBrains Mono' }}>
-      <SectionCard title="무역량 상위 8개국" icon="🚢">
-        <DataTable
-          headers={['국가', '무역량', '주요상품 1', '주요상품 2']}
-          rows={tradeVolume}
-        />
+      <SectionCard title="주요국 무역 규모 (GDP 대비 %)" icon="🚢" api lastUpdated={lastUpdated} onRefresh={fetchTrade}>
+        {tradeLoading ? <Loader /> : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {tradeData.map((d, i) => {
+              const code = d.country?.id;
+              const name = COUNTRY_KO[code] || d.country?.value;
+              const width = (d.value / maxTrade) * 100;
+              return (
+                <div key={i}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ color: theme.text, fontSize: '12px' }}>{name}</span>
+                    <span style={{ color: theme.muted, fontSize: '12px' }}>{d.value?.toFixed(1)}%</span>
+                  </div>
+                  <div style={{ background: theme.bg, height: '18px', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ background: COUNTRY_COLORS[i % COUNTRY_COLORS.length], height: '100%', width: width + '%' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </SectionCard>
 
       <SectionCard title="컨테이너항 처리량 (M TEU)" icon="📦">
@@ -915,8 +961,28 @@ const Trade = () => {
 };
 
 const Aviation = () => {
+  const [liveFlights, setLiveFlights] = useState(null);
+  const [flightsUpdated, setFlightsUpdated] = useState(null);
+
+  const fetchFlights = async () => {
+    try {
+      const res = await fetch('https://opensky-network.org/api/states/all?lamin=20&lamax=75&lomin=-140&lomax=145');
+      const data = await res.json();
+      setLiveFlights(data.states?.length ?? null);
+      setFlightsUpdated(new Date());
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchFlights();
+    const interval = setInterval(fetchFlights, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const stats = [
-    { title: '일일 항공편', value: fmt(115e3), icon: '✈️', color: '#0ea5e9' },
+    { title: '현재 비행 중 (북반구)', value: liveFlights != null ? fmt(liveFlights) : '...', icon: '✈️', color: '#0ea5e9' },
     { title: '연간 승객', value: fmt(4.7e9), icon: '👫', color: '#8b5cf6' },
     { title: '공항 수', value: fmt(41e3), icon: '🛫', color: '#f97316' },
     { title: '항공사 수', value: fmt(5000), icon: '🏢', color: '#10b981' },
@@ -955,7 +1021,7 @@ const Aviation = () => {
         ))}
       </div>
 
-      <SectionCard title="공항 승객량 순위" icon="🛬">
+      <SectionCard title="공항 승객량 순위" icon="🛬" api lastUpdated={flightsUpdated} onRefresh={fetchFlights}>
         <DataTable
           headers={['공항', '연간 승객', '위치']}
           rows={airports}
@@ -1004,6 +1070,9 @@ const Aviation = () => {
 };
 
 const Energy = () => {
+  const [lastUpdated, setLastUpdated] = useState(() => new Date());
+  const refreshEnergy = () => setLastUpdated(new Date());
+
   const energyMix = [
     { name: 'Oil', pct: 31, color: '#424242' },
     { name: 'Coal', pct: 26, color: '#795548' },
@@ -1030,7 +1099,7 @@ const Energy = () => {
 
   return (
     <div style={{ fontFamily: 'JetBrains Mono' }}>
-      <SectionCard title="글로벌 에너지 구성" icon="⚡">
+      <SectionCard title="글로벌 에너지 구성" icon="⚡" lastUpdated={lastUpdated} onRefresh={refreshEnergy}>
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', height: '30px', borderRadius: '6px', overflow: 'hidden' }}>
             {energyMix.map((e) => (
@@ -1110,22 +1179,43 @@ const Energy = () => {
 const Space = () => {
   const [apod, setApod] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [apodUpdated, setApodUpdated] = useState(null);
+  const [iss, setIss] = useState(null);
+
+  const fetchAPOD = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY');
+      const data = await res.json();
+      setApod(data);
+      setApodUpdated(new Date());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchISS = async () => {
+    try {
+      const res = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+      const data = await res.json();
+      setIss(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
-    const fetchAPOD = async () => {
-      try {
-        const res = await fetch(
-          'https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY'
-        );
-        const data = await res.json();
-        setApod(data);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAPOD();
+    const apodInterval = setInterval(fetchAPOD, 24 * 60 * 60 * 1000);
+    return () => clearInterval(apodInterval);
+  }, []);
+
+  useEffect(() => {
+    fetchISS();
+    const issInterval = setInterval(fetchISS, 15 * 1000);
+    return () => clearInterval(issInterval);
   }, []);
 
   const APIs = [
@@ -1139,7 +1229,25 @@ const Space = () => {
 
   return (
     <div style={{ fontFamily: 'JetBrains Mono' }}>
-      <SectionCard title="Astronomy Picture of the Day" icon="🛰️" api>
+      <SectionCard title="ISS 실시간 위치" icon="🛸" api lastUpdated={iss ? new Date() : null} onRefresh={fetchISS}>
+        {iss ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
+            {[
+              { label: '위도', value: iss.latitude?.toFixed(4) + '°' },
+              { label: '경도', value: iss.longitude?.toFixed(4) + '°' },
+              { label: '고도', value: Math.round(iss.altitude) + ' km' },
+              { label: '속도', value: Math.round(iss.velocity) + ' km/h' },
+            ].map((item) => (
+              <div key={item.label} style={{ background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '11px', color: theme.muted, marginBottom: '6px' }}>{item.label}</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: theme.accent }}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+        ) : <Loader />}
+      </SectionCard>
+
+      <SectionCard title="Astronomy Picture of the Day" icon="🛰️" api lastUpdated={apodUpdated} onRefresh={fetchAPOD}>
         {loading ? (
           <Loader />
         ) : apod ? (
@@ -1222,18 +1330,37 @@ const Space = () => {
 };
 
 const Health = () => {
-  const lifeExp = [
-    { name: 'Japan', val: 84.8 },
-    { name: 'Switzerland', val: 83.8 },
-    { name: 'Korea', val: 83.7 },
-    { name: 'Singapore', val: 83.6 },
-    { name: 'Spain', val: 83.3 },
-    { name: 'Australia', val: 83.2 },
-    { name: 'Italy', val: 83.0 },
-    { name: 'Sweden', val: 82.9 },
-    { name: 'France', val: 82.5 },
-    { name: 'Germany', val: 81.0 },
-  ];
+  const [lifeExp, setLifeExp] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const fetchHealth = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        'https://api.worldbank.org/v2/country/JPN;CHE;KOR;SGP;ESP;AUS;ITA;SWE;FRA;DEU/indicator/SP.DYN.LE00.IN?format=json&date=2022&per_page=20'
+      );
+      const data = await res.json();
+      if (data[1]) {
+        const sorted = data[1]
+          .filter((d) => d.value)
+          .sort((a, b) => b.value - a.value)
+          .map((d) => ({ name: d.country?.value, val: d.value }));
+        setLifeExp(sorted);
+        setLastUpdated(new Date());
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const maxVal = 90;
 
@@ -1246,7 +1373,8 @@ const Health = () => {
 
   return (
     <div style={{ fontFamily: 'JetBrains Mono' }}>
-      <SectionCard title="국가별 평균 기대수명" icon="🏥">
+      <SectionCard title="국가별 평균 기대수명" icon="🏥" api lastUpdated={lastUpdated} onRefresh={fetchHealth}>
+        {loading ? <Loader /> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {lifeExp.map((l, i) => {
             const width = ((l.val - 70) / 20) * 100;
@@ -1276,6 +1404,7 @@ const Health = () => {
             );
           })}
         </div>
+        )}
       </SectionCard>
 
       <h2 style={{ color: theme.text, marginBottom: '16px', fontSize: '18px' }}>보건 데이터 소스</h2>
