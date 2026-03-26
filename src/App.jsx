@@ -59,7 +59,7 @@ const Card = ({ title, value, sub, icon, color }) => {
   );
 };
 
-const SectionCard = ({ title, icon, children, api }) => (
+const SectionCard = ({ title, icon, children, api, lastUpdated, onRefresh }) => (
   <div
     style={{
       background: theme.card,
@@ -70,29 +70,54 @@ const SectionCard = ({ title, icon, children, api }) => (
       fontFamily: 'JetBrains Mono',
     }}
   >
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <span style={{ fontSize: '20px' }}>{icon}</span>
         <h3 style={{ margin: 0, color: theme.text, fontSize: '18px', fontWeight: 'bold' }}>{title}</h3>
       </div>
-      {api && (
-        <div
-          style={{
-            background: '#10b981',
-            color: '#fff',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}
-        >
-          <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#fff' }}></span>
-          LIVE API
-        </div>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {lastUpdated && (
+          <span style={{ fontSize: '10px', color: theme.muted }}>
+            업데이트: {lastUpdated.toLocaleTimeString('ko-KR')}
+          </span>
+        )}
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            style={{
+              background: 'transparent',
+              border: `1px solid ${theme.border}`,
+              color: theme.muted,
+              padding: '3px 8px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              lineHeight: 1,
+            }}
+            title="새로고침"
+          >
+            ↻
+          </button>
+        )}
+        {api && (
+          <div
+            style={{
+              background: '#10b981',
+              color: '#fff',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#fff' }}></span>
+            LIVE API
+          </div>
+        )}
+      </div>
     </div>
     {children}
   </div>
@@ -288,9 +313,21 @@ const Overview = () => {
   );
 };
 
+const STOCK_SYMBOLS = [
+  { symbol: '^GSPC', name: 'S&P 500' },
+  { symbol: '^KS11', name: 'KOSPI' },
+  { symbol: '^N225', name: 'Nikkei 225' },
+  { symbol: '000001.SS', name: 'Shanghai' },
+  { symbol: '^FTSE', name: 'FTSE 100' },
+  { symbol: '^GDAXI', name: 'DAX' },
+];
+
 const Economy = () => {
   const [gdp, setGdp] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [gdpLoading, setGdpLoading] = useState(true);
+  const [stocks, setStocks] = useState([]);
+  const [stocksLoading, setStocksLoading] = useState(true);
+  const [stocksUpdated, setStocksUpdated] = useState(null);
 
   useEffect(() => {
     const fetchGDP = async () => {
@@ -308,23 +345,43 @@ const Economy = () => {
       } catch (e) {
         console.error(e);
       } finally {
-        setLoading(false);
+        setGdpLoading(false);
       }
     };
     fetchGDP();
   }, []);
 
+  const fetchStocks = async () => {
+    setStocksLoading(true);
+    try {
+      const res = await fetch('/api/stocks');
+      const data = await res.json();
+      const results = data?.quoteResponse?.result || [];
+      const mapped = STOCK_SYMBOLS.map(({ symbol, name }) => {
+        const q = results.find((r) => r.symbol === symbol);
+        if (!q) return { idx: name, val: 'N/A', chg: 'N/A' };
+        const price = q.regularMarketPrice?.toLocaleString('en-US', { maximumFractionDigits: 2 }) ?? 'N/A';
+        const chgPct = q.regularMarketChangePercent;
+        const chg = chgPct != null ? (chgPct >= 0 ? '+' : '') + chgPct.toFixed(2) + '%' : 'N/A';
+        return { idx: name, val: price, chg };
+      });
+      setStocks(mapped);
+      setStocksUpdated(new Date());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setStocksLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStocks();
+    const interval = setInterval(fetchStocks, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const colors = ['#3b82f6', '#ef4444', '#22c55e', '#f97316'];
   const maxGdp = gdp[0]?.value || 1;
-
-  const stocks = [
-    { idx: 'S&P 500', val: '~6,576', chg: '-3.0%' },
-    { idx: 'KOSPI', val: '~5,518', chg: '+37.0%' },
-    { idx: 'Nikkei 225', val: '~53,870', chg: '+7.0%' },
-    { idx: 'Shanghai', val: '~3,909', chg: '+3.5%' },
-    { idx: 'FTSE 100', val: '~10,104', chg: '+0.0%' },
-    { idx: 'DAX', val: '~22,602', chg: '+21.0%' },
-  ];
 
   const APIs = [
     { name: 'World Bank', desc: 'GDP, 개발 지표', url: 'worldbank.org', badge: 'FREE' },
@@ -338,7 +395,7 @@ const Economy = () => {
   return (
     <div style={{ fontFamily: 'JetBrains Mono' }}>
       <SectionCard title="주요 국가별 GDP" icon="💹" api>
-        {loading ? (
+        {gdpLoading ? (
           <Loader />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -374,11 +431,21 @@ const Economy = () => {
         )}
       </SectionCard>
 
-      <SectionCard title="글로벌 주식지수" icon="📊">
-        <DataTable
-          headers={['지수', '수준', '변화']}
-          rows={stocks.map((s) => [s.idx, s.val, <span style={{ color: s.chg.startsWith('+') ? '#10b981' : '#ef4444' }}>{s.chg}</span>])}
-        />
+      <SectionCard title="글로벌 주식지수" icon="📊" api lastUpdated={stocksUpdated} onRefresh={fetchStocks}>
+        {stocksLoading ? (
+          <Loader />
+        ) : (
+          <DataTable
+            headers={['지수', '현재가', '등락률']}
+            rows={stocks.map((s) => [
+              s.idx,
+              s.val,
+              <span style={{ color: s.chg === 'N/A' ? theme.muted : s.chg.startsWith('+') ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                {s.chg}
+              </span>,
+            ])}
+          />
+        )}
       </SectionCard>
 
       <h2 style={{ color: theme.text, marginBottom: '16px', fontSize: '18px' }}>경제 데이터 소스</h2>
@@ -427,6 +494,7 @@ const Earthquake = () => {
   const [quakes, setQuakes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ count: 0, maxMag: 0 });
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const ranges = [
     { label: '1시간', val: 'hour' },
@@ -435,29 +503,33 @@ const Earthquake = () => {
     { label: '30일', val: 'month' },
   ];
 
-  useEffect(() => {
-    const fetchQuakes = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_${range}.geojson`
-        );
-        const data = await res.json();
-        if (data.features) {
-          const sorted = data.features.sort((a, b) => b.properties.mag - a.properties.mag);
-          setQuakes(sorted.slice(0, 20));
-          setStats({
-            count: data.features.length,
-            maxMag: data.features.length > 0 ? Math.max(...data.features.map((f) => f.properties.mag)) : 0,
-          });
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+  const fetchQuakes = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_${range}.geojson`
+      );
+      const data = await res.json();
+      if (data.features) {
+        const sorted = data.features.sort((a, b) => b.properties.mag - a.properties.mag);
+        setQuakes(sorted.slice(0, 20));
+        setStats({
+          count: data.features.length,
+          maxMag: data.features.length > 0 ? Math.max(...data.features.map((f) => f.properties.mag)) : 0,
+        });
+        setLastUpdated(new Date());
       }
-    };
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchQuakes();
+    const interval = setInterval(fetchQuakes, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [range]);
 
   const getMagColor = (mag) => {
@@ -469,7 +541,7 @@ const Earthquake = () => {
 
   return (
     <div style={{ fontFamily: 'JetBrains Mono' }}>
-      <SectionCard title="지진 데이터" icon="🌋" api>
+      <SectionCard title="지진 데이터" icon="🌋" api lastUpdated={lastUpdated} onRefresh={fetchQuakes}>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
           {ranges.map((r) => (
             <button
@@ -631,6 +703,7 @@ const Population = () => {
 const Climate = () => {
   const [weather, setWeather] = useState({});
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const cities = [
     { name: 'Seoul', lat: 37.57, lon: 126.98, flag: '🇰🇷' },
@@ -641,27 +714,30 @@ const Climate = () => {
     { name: 'Dubai', lat: 25.2, lon: 55.27, flag: '🇦🇪' },
   ];
 
-  useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        const results = {};
-        await Promise.all(
-          cities.map(async (c) => {
-            const res = await fetch(
-              `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`
-            );
-            const data = await res.json();
-            results[c.name] = data.current;
-          })
-        );
-        setWeather(results);
-      } catch (e) {
-        console.error(e);
+  const fetchWeather = async () => {
+    setLoading(true);
+    try {
+      const results = {};
+      await Promise.all(
+        cities.map(async (c) => {
+          const res = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${c.lat}&longitude=${c.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`
+          );
+          const data = await res.json();
+          results[c.name] = data.current;
+        })
+      );
+      setWeather(results);
+      setLastUpdated(new Date());
+    } catch (e) {
+      console.error(e);
       } finally {
         setLoading(false);
       }
     };
     fetchWeather();
+    const interval = setInterval(fetchWeather, 10 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const getWeatherEmoji = (code) => {
@@ -684,7 +760,7 @@ const Climate = () => {
 
   return (
     <div style={{ fontFamily: 'JetBrains Mono' }}>
-      <SectionCard title="주요 도시 날씨" icon="🌡️" api>
+      <SectionCard title="주요 도시 날씨" icon="🌡️" api lastUpdated={lastUpdated} onRefresh={fetchWeather}>
         {loading ? (
           <Loader />
         ) : (
