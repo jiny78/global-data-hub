@@ -361,14 +361,11 @@ const Economy = () => {
     try {
       const res = await fetch('/api/stocks');
       const data = await res.json();
-      const results = data?.quoteResponse?.result || [];
-      const mapped = STOCK_SYMBOLS.map(({ symbol, name }) => {
-        const q = results.find((r) => r.symbol === symbol);
-        if (!q) return { idx: name, val: 'N/A', chg: 'N/A' };
-        const price = q.regularMarketPrice?.toLocaleString('en-US', { maximumFractionDigits: 2 }) ?? 'N/A';
-        const chgPct = q.regularMarketChangePercent;
-        const chg = chgPct != null ? (chgPct >= 0 ? '+' : '') + chgPct.toFixed(2) + '%' : 'N/A';
-        return { idx: name, val: price, chg };
+      const results = data?.result || [];
+      const mapped = results.map(({ name, price, changePct }) => {
+        const val = price != null ? price.toLocaleString('en-US', { maximumFractionDigits: 2 }) : 'N/A';
+        const chg = changePct != null ? (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '%' : 'N/A';
+        return { idx: name, val, chg };
       });
       setStocks(mapped);
       setStocksUpdated(new Date());
