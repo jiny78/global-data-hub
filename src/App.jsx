@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 
 // Theme colors
 const theme = {
-  bg: '#0a0e17',
-  card: '#111827',
-  text: '#e2e8f0',
-  border: '#1e293b',
-  muted: '#64748b',
-  accent: '#0ea5e9',
-  accentLight: '#06b6d4',
-  accentDark: '#0284c7',
+  bg: '#ffffff',
+  card: '#f1f5f9',
+  text: '#0f172a',
+  border: '#cbd5e1',
+  muted: '#475569',
+  accent: '#0284c7',
+  accentLight: '#0ea5e9',
+  accentDark: '#0369a1',
 };
 
 // Number formatter
@@ -332,7 +332,7 @@ const Economy = () => {
               return (
                 <div key={i}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ color: theme.text, fontSize: '12px' }}>{d.countryName}</span>
+                    <span style={{ color: theme.text, fontSize: '12px' }}>{d.country?.value}</span>
                     <span style={{ color: theme.muted, fontSize: '12px' }}>${fmt(d.value)}</span>
                   </div>
                   <div
