@@ -1,6 +1,6 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--fg);overflow:hidden}
-:root{--bg:#0a0e17;--card:#111827;--border:#1e293b;--fg:#e2e8f0;--muted:#64748b;--accent:#0ea5e9}
+:root{--bg:#ffffff;--card:#f1f5f9;--border:#cbd5e1;--fg:#0f172a;--muted:#475569;--accent:#0284c7}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:var(--bg)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
