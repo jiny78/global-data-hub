@@ -189,7 +189,8 @@ const Overview = () => {
       {/* Hero Banner */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #0d1b2a, #1b263b)',
+          background: 'linear-gradient(135deg, #e0f2fe, #f0f9ff)',
+          border: `1px solid ${theme.border}`,
           padding: '60px 40px',
           borderRadius: '8px',
           marginBottom: '40px',
@@ -203,7 +204,7 @@ const Overview = () => {
             position: 'absolute',
             inset: 0,
             backgroundImage:
-              'radial-gradient(circle, rgba(14, 165, 233, 0.1) 1px, transparent 1px)',
+              'radial-gradient(circle, rgba(2, 132, 199, 0.08) 1px, transparent 1px)',
             backgroundSize: '30px 30px',
             zIndex: 0,
           }}
