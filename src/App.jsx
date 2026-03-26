@@ -318,12 +318,12 @@ const Economy = () => {
   const maxGdp = gdp[0]?.value || 1;
 
   const stocks = [
-    { idx: 'S&P 500', val: '5,900+', chg: '+18.2%' },
-    { idx: 'KOSPI', val: '2,650+', chg: '+28.5%' },
-    { idx: 'Nikkei 225', val: '39,200+', chg: '+32.1%' },
-    { idx: 'Shanghai', val: '3,350+', chg: '-5.2%' },
-    { idx: 'FTSE 100', val: '8,400+', chg: '+9.8%' },
-    { idx: 'DAX', val: '20,800+', chg: '+25.3%' },
+    { idx: 'S&P 500', val: '~6,576', chg: '-3.0%' },
+    { idx: 'KOSPI', val: '~5,518', chg: '+37.0%' },
+    { idx: 'Nikkei 225', val: '~53,870', chg: '+7.0%' },
+    { idx: 'Shanghai', val: '~3,909', chg: '+3.5%' },
+    { idx: 'FTSE 100', val: '~10,104', chg: '+0.0%' },
+    { idx: 'DAX', val: '~22,602', chg: '+21.0%' },
   ];
 
   const APIs = [

@@ -8,7 +8,10 @@
       "Bash(rm /c/Users/User/Projects/global-data-hub/.git/config.lock)",
       "Bash(git -C /c/Users/User/Projects/global-data-hub init)",
       "Bash(git -C /c/Users/User/Projects/global-data-hub add .)",
-      "Bash(git -C:*)"
+      "Bash(git -C:*)",
+      "Bash(gh repo:*)",
+      "Bash(vercel:*)",
+      "WebSearch"
     ]
   }
 }
