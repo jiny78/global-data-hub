@@ -333,6 +333,12 @@ const Economy = () => {
   const [stocks, setStocks] = useState([]);
   const [stocksLoading, setStocksLoading] = useState(true);
   const [stocksUpdated, setStocksUpdated] = useState(null);
+  const [commodities, setCommodities] = useState([]);
+  const [commLoading, setCommLoading] = useState(true);
+  const [commUpdated, setCommUpdated] = useState(null);
+  const [rates, setRates] = useState(null);
+  const [ratesLoading, setRatesLoading] = useState(true);
+  const [ratesUpdated, setRatesUpdated] = useState(null);
 
   useEffect(() => {
     const fetchGDP = async () => {
@@ -376,9 +382,49 @@ const Economy = () => {
     }
   };
 
+  const fetchCommodities = async () => {
+    setCommLoading(true);
+    try {
+      const res = await fetch('/api/commodities');
+      const data = await res.json();
+      setCommodities(data?.result || []);
+      setCommUpdated(new Date());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCommLoading(false);
+    }
+  };
+
+  const fetchRates = async () => {
+    setRatesLoading(true);
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      const data = await res.json();
+      setRates(data?.rates || null);
+      setRatesUpdated(new Date());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRatesLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchStocks();
     const interval = setInterval(fetchStocks, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetchCommodities();
+    const interval = setInterval(fetchCommodities, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetchRates();
+    const interval = setInterval(fetchRates, 10 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -448,6 +494,49 @@ const Economy = () => {
             ])}
           />
         )}
+      </SectionCard>
+
+      <SectionCard title="원자재 시세" icon="🛢️" api lastUpdated={commUpdated} onRefresh={fetchCommodities}>
+        {commLoading ? <Loader /> : (
+          <DataTable
+            headers={['품목', '현재가', '단위', '등락률']}
+            rows={commodities.map((c) => {
+              const chg = c.changePct != null ? (c.changePct >= 0 ? '+' : '') + c.changePct.toFixed(2) + '%' : 'N/A';
+              const chgColor = c.changePct == null ? theme.muted : c.changePct >= 0 ? '#10b981' : '#ef4444';
+              return [
+                c.name,
+                c.price != null ? '$' + c.price.toLocaleString('en-US', { maximumFractionDigits: 2 }) : 'N/A',
+                c.unit,
+                <span style={{ color: chgColor, fontWeight: 'bold' }}>{chg}</span>,
+              ];
+            })}
+          />
+        )}
+      </SectionCard>
+
+      <SectionCard title="주요 환율 (USD 기준)" icon="💱" api lastUpdated={ratesUpdated} onRefresh={fetchRates}>
+        {ratesLoading ? <Loader /> : rates ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+            {[
+              { code: 'KRW', name: '한국 원', flag: '🇰🇷' },
+              { code: 'JPY', name: '일본 엔', flag: '🇯🇵' },
+              { code: 'EUR', name: '유로', flag: '🇪🇺' },
+              { code: 'GBP', name: '영국 파운드', flag: '🇬🇧' },
+              { code: 'CNY', name: '중국 위안', flag: '🇨🇳' },
+              { code: 'HKD', name: '홍콩 달러', flag: '🇭🇰' },
+              { code: 'SGD', name: '싱가포르 달러', flag: '🇸🇬' },
+              { code: 'AUD', name: '호주 달러', flag: '🇦🇺' },
+            ].map(({ code, name, flag }) => (
+              <div key={code} style={{ background: theme.bg, border: `1px solid ${theme.border}`, borderRadius: '8px', padding: '14px' }}>
+                <div style={{ fontSize: '11px', color: theme.muted, marginBottom: '4px' }}>{flag} {name}</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: theme.text }}>
+                  {rates[code] != null ? rates[code].toLocaleString('en-US', { maximumFractionDigits: code === 'KRW' || code === 'JPY' ? 1 : 4 }) : 'N/A'}
+                </div>
+                <div style={{ fontSize: '10px', color: theme.muted, marginTop: '3px' }}>1 USD = {code}</div>
+              </div>
+            ))}
+          </div>
+        ) : <div style={{ color: theme.muted }}>데이터를 불러올 수 없습니다.</div>}
       </SectionCard>
 
       <h2 style={{ color: theme.text, marginBottom: '16px', fontSize: '18px' }}>경제 데이터 소스</h2>
