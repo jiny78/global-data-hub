@@ -1,5 +1,5 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--fg);overflow:hidden}
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--fg)}
 :root{--bg:#ffffff;--card:#f1f5f9;--border:#cbd5e1;--fg:#0f172a;--muted:#475569;--accent:#0284c7}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:var(--bg)}

@@ -1,4 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
+function useWindowWidth() {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return width;
+}
 
 // Theme colors
 const theme = {
@@ -22,29 +32,32 @@ const fmt = (n) => {
 };
 
 // Shared Components
-const Card = ({ title, value, sub, icon, color }) => (
-  <div
-    style={{
-      background: theme.card,
-      border: `1px solid ${theme.border}`,
-      borderRadius: '8px',
-      padding: '20px',
-      borderLeft: `4px solid ${color || theme.accent}`,
-      fontFamily: 'JetBrains Mono',
-    }}
-  >
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div>
-        <div style={{ fontSize: '12px', color: theme.muted, marginBottom: '8px' }}>{title}</div>
-        <div style={{ fontSize: '24px', fontWeight: 'bold', color: theme.text, marginBottom: sub ? '4px' : 0 }}>
-          {value}
+const Card = ({ title, value, sub, icon, color }) => {
+  const isMobile = useWindowWidth() < 768;
+  return (
+    <div
+      style={{
+        background: theme.card,
+        border: `1px solid ${theme.border}`,
+        borderRadius: '8px',
+        padding: isMobile ? '14px' : '20px',
+        borderLeft: `4px solid ${color || theme.accent}`,
+        fontFamily: 'JetBrains Mono',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontSize: '11px', color: theme.muted, marginBottom: '6px' }}>{title}</div>
+          <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: 'bold', color: theme.text, marginBottom: sub ? '4px' : 0 }}>
+            {value}
+          </div>
+          {sub && <div style={{ fontSize: '11px', color: theme.muted }}>{sub}</div>}
         </div>
-        {sub && <div style={{ fontSize: '12px', color: theme.muted }}>{sub}</div>}
+        {icon && <div style={{ fontSize: isMobile ? '22px' : '28px' }}>{icon}</div>}
       </div>
-      {icon && <div style={{ fontSize: '28px' }}>{icon}</div>}
     </div>
-  </div>
-);
+  );
+};
 
 const SectionCard = ({ title, icon, children, api }) => (
   <div
@@ -158,6 +171,7 @@ const Loader = () => (
 
 // Tab Components
 const Overview = () => {
+  const isMobile = useWindowWidth() < 768;
   const stats = [
     { title: '세계 인구', value: fmt(8.19e9), sub: '2024년', icon: '👥', color: '#06b6d4' },
     { title: '국가 수', value: '195', icon: '🌍', color: '#8b5cf6' },
@@ -191,9 +205,9 @@ const Overview = () => {
         style={{
           background: 'linear-gradient(135deg, #e0f2fe, #f0f9ff)',
           border: `1px solid ${theme.border}`,
-          padding: '60px 40px',
+          padding: isMobile ? '32px 20px' : '60px 40px',
           borderRadius: '8px',
-          marginBottom: '40px',
+          marginBottom: isMobile ? '20px' : '40px',
           position: 'relative',
           overflow: 'hidden',
           textAlign: 'center',
@@ -210,7 +224,7 @@ const Overview = () => {
           }}
         ></div>
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <h1 style={{ fontSize: '48px', margin: '0 0 12px 0', color: theme.text }}>🌐 Global Data Hub</h1>
+          <h1 style={{ fontSize: isMobile ? '28px' : '48px', margin: '0 0 12px 0', color: theme.text }}>🌐 Global Data Hub</h1>
           <p style={{ fontSize: '14px', color: theme.muted, margin: 0 }}>실시간 글로벌 데이터 통합 대시보드</p>
         </div>
       </div>
@@ -219,9 +233,9 @@ const Overview = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '16px',
-          marginBottom: '40px',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: isMobile ? '10px' : '16px',
+          marginBottom: isMobile ? '20px' : '40px',
         }}
       >
         {stats.map((s, i) => (
@@ -1234,6 +1248,7 @@ export default function App() {
   const [collapsed, setCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [dateTime, setDateTime] = useState(new Date());
+  const isMobile = useWindowWidth() < 768;
 
   useEffect(() => {
     const timer = setInterval(() => setDateTime(new Date()), 1000);
@@ -1255,6 +1270,90 @@ export default function App() {
 
   const activeTabData = tabs.find((t) => t.id === activeTab);
   const ActiveComponent = activeTabData?.component;
+
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+          background: theme.bg,
+          color: theme.text,
+          fontFamily: 'JetBrains Mono',
+        }}
+      >
+        {/* Mobile Header */}
+        <div
+          style={{
+            background: theme.card,
+            borderBottom: `1px solid ${theme.border}`,
+            padding: '12px 16px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '20px' }}>{activeTabData?.icon}</span>
+            <h1 style={{ margin: 0, fontSize: '16px', fontWeight: 'bold' }}>{activeTabData?.name}</h1>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '10px', color: theme.muted }}>
+              {dateTime.toLocaleTimeString('ko-KR')}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: theme.bg, padding: '4px 8px', borderRadius: '6px' }}>
+              <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }}></span>
+              <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#10b981' }}>LIVE</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+          {ActiveComponent && <ActiveComponent />}
+        </div>
+
+        {/* Bottom Tab Bar */}
+        <div
+          style={{
+            background: theme.card,
+            borderTop: `1px solid ${theme.border}`,
+            display: 'flex',
+            overflowX: 'auto',
+            flexShrink: 0,
+          }}
+        >
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                flex: '0 0 auto',
+                padding: '10px 14px',
+                background: 'transparent',
+                border: 'none',
+                borderTop: `3px solid ${activeTab === tab.id ? theme.accent : 'transparent'}`,
+                color: activeTab === tab.id ? theme.accent : theme.muted,
+                cursor: 'pointer',
+                fontSize: '10px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '3px',
+                fontFamily: 'JetBrains Mono',
+                fontWeight: activeTab === tab.id ? 'bold' : 'normal',
+              }}
+            >
+              <span style={{ fontSize: '18px' }}>{tab.icon}</span>
+              {tab.name}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1307,7 +1406,7 @@ export default function App() {
                 marginBottom: '8px',
                 background: activeTab === tab.id ? theme.accent : 'transparent',
                 border: `1px solid ${activeTab === tab.id ? theme.accent : theme.border}`,
-                color: theme.text,
+                color: activeTab === tab.id ? '#ffffff' : theme.text,
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '12px',
@@ -1315,6 +1414,7 @@ export default function App() {
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
+                fontFamily: 'JetBrains Mono',
               }}
             >
               <span style={{ marginRight: '8px' }}>{tab.icon}</span>
