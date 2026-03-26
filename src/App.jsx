@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function useWindowWidth() {
   const [width, setWidth] = useState(window.innerWidth);
@@ -737,10 +737,12 @@ const Climate = () => {
       setLastUpdated(new Date());
     } catch (e) {
       console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchWeather();
     const interval = setInterval(fetchWeather, 10 * 60 * 1000);
     return () => clearInterval(interval);
